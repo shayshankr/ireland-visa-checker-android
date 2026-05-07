@@ -132,7 +132,12 @@ def check_application(req: CheckRequest):
             m = df[df["application_number"] == target]
             if not m.empty:
                 row = m.iloc[0]
-                return {"number": target, "embassy": name, "decision": row.get("decision", "")}
+                return {
+                    "number": target,
+                    "embassy": name,
+                    "decision": row.get("decision", ""),
+                    "difference": abs(int(num) - int(target)),
+                }
         return None
 
     if before:

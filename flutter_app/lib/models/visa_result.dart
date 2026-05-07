@@ -23,17 +23,20 @@ class NearestResult {
   final String number;
   final String embassy;
   final String decision;
+  final int? difference;
 
   const NearestResult({
     required this.number,
     required this.embassy,
     required this.decision,
+    this.difference,
   });
 
   factory NearestResult.fromJson(Map<String, dynamic> json) => NearestResult(
         number: json['number'] as String,
         embassy: json['embassy'] as String,
         decision: json['decision'] as String,
+        difference: json['difference'] as int?,
       );
 
   bool get isApproved => decision.toUpperCase() == 'APPROVED';

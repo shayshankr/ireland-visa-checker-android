@@ -133,7 +133,8 @@ def fetch_embassy(embassy: dict) -> tuple[pd.DataFrame, str]:
 
     etag = last_modified = None
     frames = []
-    for link in links:
+    # Only fetch the most recent file (first link on the page)
+    for link in links[:1]:
         try:
             r = _get_with_retry(link["url"], stream=True)
             content = r.content

@@ -276,6 +276,13 @@ class _NearestRow extends StatelessWidget {
             '(${entry.embassy})',
             style: const TextStyle(fontSize: 12, color: Colors.grey),
           ),
+          if (entry.difference != null) ...[
+            const SizedBox(width: 6),
+            Text(
+              'Δ ${entry.difference}',
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+            ),
+          ],
         ],
       ),
     );
