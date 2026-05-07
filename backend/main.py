@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from embassies import EMBASSIES
-from fetchers import fetch_embassy
+from fetchers import fetch_embassy, _find_file_links
 
 app = FastAPI(title="Ireland Visa Checker API", version="1.0.0")
 
@@ -84,7 +84,7 @@ class CheckRequest(BaseModel):
 
 def _normalize(raw: str) -> str:
     """Strip optional IRL prefix and non-digits, require exactly 8 digits."""
-    stripped = re.sub(r"^[Ii][Rr][Ll]\d*", "", raw.strip())
+    stripped = re.sub(r"^[Ii][Rr][Ll]", "", raw.strip())
     digits = re.sub(r"\D", "", stripped)
     return digits
 
@@ -150,6 +150,50 @@ def check_application(req: CheckRequest):
             nearest["after"] = entry
 
     return {"application_number": num, "found": False, "results": [], "nearest": nearest or None}
+
+
+# ── Debug: show what links are found on each embassy page ────────────────────
+
+@app.get("/api/debug/ods/{embassy_name}")
+def debug_ods(embassy_name: str):
+    import io, requests
+    from cache import HEADERS
+    embassy = next((e for e in EMBASSIES if e["name"].lower() == embassy_name.lower()), None)
+    if not embassy:
+        raise HTTPException(status_code=404, detail="Embassy not found")
+    links = _find_file_links(embassy["url"], embassy["keyword"], embassy["file_type"])
+    if not links:
+        return {"error": "no links found"}
+    r = requests.get(links[0]["url"], headers=HEADERS, timeout=30)
+    try:
+        import pyexcel_ods3
+        data = pyexcel_ods3.get_data(io.BytesIO(r.content))
+        preview = {}
+        first_data_row = None
+        for sheet, rows in data.items():
+            preview[sheet] = rows[:20]
+            for i, row in enumerate(rows):
+                for cell in row:
+                    if re.match(r"^\d{8}$", str(cell).strip()):
+                        first_data_row = {"row_index": i, "row": row}
+                        break
+                if first_data_row:
+                    break
+        return {"url": links[0]["url"], "sheets": list(data.keys()), "first_data_row": first_data_row, "preview": preview}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.get("/api/debug/links")
+def debug_links():
+    results = {}
+    for embassy in EMBASSIES:
+        try:
+            links = _find_file_links(embassy["url"], embassy["keyword"], embassy["file_type"])
+            results[embassy["name"]] = {"found": len(links), "links": links}
+        except Exception as e:
+            results[embassy["name"]] = {"found": 0, "error": str(e)}
+    return results
 
 
 # ── Manual refresh ────────────────────────────────────────────────────────────
