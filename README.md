@@ -1,3 +1,13 @@
+---
+title: Ireland Visa API
+emoji: 🌍
+colorFrom: green
+colorTo: green
+sdk: docker
+app_port: 8000
+pinned: false
+---
+
 # Ireland Visa Checker — Android App
 
 Native Android app (Flutter) + FastAPI backend for checking Irish visa application decisions across five embassies (New Delhi, Beijing, Abuja, Abu Dhabi, Ankara).
