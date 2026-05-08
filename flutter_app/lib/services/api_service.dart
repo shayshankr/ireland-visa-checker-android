@@ -8,7 +8,7 @@ import '../models/visa_result.dart';
 class ApiService {
   // Update this to your deployed backend URL before releasing to Play Store.
   // For local testing use: http://10.0.2.2:8000  (Android emulator → host machine)
-  static const String baseUrl = 'http://10.0.2.2:8000';
+  static const String baseUrl = 'https://shayshankrathore-ireland-visa-api.hf.space';
 
   static Future<CheckResponse> checkApplication(String applicationNumber) async {
     final response = await http

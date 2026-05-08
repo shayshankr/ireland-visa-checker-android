@@ -34,3 +34,13 @@ flutter_app/android/app/release/
 # OS
 .DS_Store
 Thumbs.db
+
+flutter_app/android/key.jks
+flutter_app/android/key.properties
+flutter_app/build/
+flutter_app/.dart_tool/
+flutter_app/ios/
+flutter_app/linux/
+flutter_app/macos/
+flutter_app/windows/
+flutter_app/web/
