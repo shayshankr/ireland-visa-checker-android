@@ -52,12 +52,13 @@ def _parse_ods(content: bytes, source_label: str) -> pd.DataFrame:
         data = pyexcel_ods3.get_data(io.BytesIO(content))
         rows_out = []
         for rows in data.values():
-            for row in rows[1:]:  # skip header row
-                if len(row) < 2:
+            for row in rows:
+                # Data is in columns 2 (app number as int) and 3 (decision)
+                if len(row) < 4:
                     continue
-                app_num = str(row[0]).strip()
-                decision = str(row[1]).strip().upper()
-                if re.match(r"^\d{8}$", app_num):
+                app_num = str(row[2]).strip()
+                decision = str(row[3]).strip().upper()
+                if re.match(r"^\d{8}$", app_num) and decision in ("APPROVED", "REFUSED"):
                     rows_out.append(
                         {
                             "application_number": app_num,
@@ -92,13 +93,14 @@ def _parse_pdf(content: bytes, source_label: str) -> pd.DataFrame:
                             if "REFUS" in w:
                                 decision = "REFUSED"
                                 break
-                        rows_out.append(
-                            {
-                                "application_number": part,
-                                "decision": decision,
-                                "source": source_label,
-                            }
-                        )
+                        if decision:  # skip rows with no recognisable decision
+                            rows_out.append(
+                                {
+                                    "application_number": part,
+                                    "decision": decision,
+                                    "source": source_label,
+                                }
+                            )
         return pd.DataFrame(rows_out) if rows_out else pd.DataFrame()
     except Exception:
         return pd.DataFrame()
