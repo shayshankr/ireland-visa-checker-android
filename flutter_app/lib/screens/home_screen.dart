@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../providers/visa_provider.dart';
 import '../widgets/check_tab.dart';
 import '../widgets/embassies_tab.dart';
+import '../widgets/irish_background.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -47,12 +48,14 @@ class _HomeScreenState extends State<HomeScreen>
           ],
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: const [
-          CheckTab(),
-          EmbassiesTab(),
-        ],
+      body: IrishBackground(
+        child: TabBarView(
+          controller: _tabController,
+          children: const [
+            CheckTab(),
+            EmbassiesTab(),
+          ],
+        ),
       ),
     );
   }
