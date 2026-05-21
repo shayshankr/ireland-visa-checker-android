@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../models/visa_result.dart';
 import '../providers/visa_provider.dart';
@@ -50,6 +51,21 @@ class _CheckTabState extends State<CheckTab> {
               if (provider.checkState == LoadState.success &&
                   provider.checkResult != null)
                 _ResultSection(result: provider.checkResult!),
+              const SizedBox(height: 8),
+              const _InfoExpansionTile(
+                icon: Icons.help_outline,
+                title: 'How to use this tool',
+                iconColor: Colors.blueGrey,
+                children: [
+                  _BulletItem('Enter your 8-digit Ireland visa application number (e.g. 63690452) or with IRL prefix (e.g. IRL63690452).'),
+                  _BulletItem('Tap "Check Status" to search across all 5 Irish embassy decision lists.'),
+                  _BulletItem('If your number is found, the embassy name and decision (Approved / Refused) will be shown.'),
+                  _BulletItem('If not found yet, two nearest published numbers are shown as a reference — your decision may be published soon.'),
+                  _BulletItem('Data refreshes automatically every 5–15 minutes from official embassy pages.'),
+                ],
+              ),
+              const SizedBox(height: 8),
+              _EmbassyLinksExpansionTile(),
             ],
           ),
         );
@@ -310,6 +326,121 @@ class _ErrorCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ── How to use / Embassy links expansion tiles ────────────────────────────────
+
+class _InfoExpansionTile extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final Color iconColor;
+  final List<Widget> children;
+
+  const _InfoExpansionTile({
+    required this.icon,
+    required this.title,
+    required this.iconColor,
+    required this.children,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 1,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      child: ExpansionTile(
+        leading: Icon(icon, color: iconColor),
+        title: Text(
+          title,
+          style: TextStyle(fontWeight: FontWeight.w600, color: iconColor),
+        ),
+        childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+        children: children,
+      ),
+    );
+  }
+}
+
+class _BulletItem extends StatelessWidget {
+  final String text;
+  const _BulletItem(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('>> ', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blueGrey)),
+          Expanded(
+            child: Text(text, style: const TextStyle(fontSize: 13, height: 1.4)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Embassy links expansion tile ──────────────────────────────────────────────
+
+class _EmbassyLinksExpansionTile extends StatelessWidget {
+  static const _embassies = [
+    {'name': 'New Delhi (India)',   'url': 'https://www.ireland.ie/en/india/newdelhi/services/visas/visa-decisions/'},
+    {'name': 'Beijing (China)',     'url': 'https://www.ireland.ie/en/china/beijing/services/visas/visa-decisions/'},
+    {'name': 'Abu Dhabi (UAE)',     'url': 'https://www.ireland.ie/en/uae/abudhabi/services/visas/visa-decisions/'},
+    {'name': 'Abuja (Nigeria)',     'url': 'https://www.ireland.ie/en/nigeria/abuja/services/visas/visa-decisions/'},
+    {'name': 'Ankara (Turkiye)',    'url': 'https://www.ireland.ie/en/turkey/ankara/services/visas/visa-decisions/'},
+  ];
+
+  const _EmbassyLinksExpansionTile();
+
+  Future<void> _open(String url) async {
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 1,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      child: ExpansionTile(
+        leading: const Icon(Icons.warning_amber_rounded, color: Colors.orange),
+        title: const Text(
+          'If any error, tap here',
+          style: TextStyle(fontWeight: FontWeight.w600, color: Colors.orange),
+        ),
+        childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+        children: [
+          const Padding(
+            padding: EdgeInsets.only(bottom: 8, left: 4),
+            child: Text(
+              'Check decisions directly on the official embassy pages:',
+              style: TextStyle(fontSize: 13, color: Colors.grey),
+            ),
+          ),
+          ..._embassies.map((e) => Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                alignment: Alignment.centerLeft,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                side: BorderSide(color: Colors.orange.shade200),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              icon: const Icon(Icons.open_in_browser, size: 18, color: Colors.orange),
+              label: Text(
+                e['name']!,
+                style: const TextStyle(fontSize: 13, color: Colors.black87),
+              ),
+              onPressed: () => _open(e['url']!),
+            ),
+          )),
+        ],
       ),
     );
   }
