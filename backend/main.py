@@ -26,22 +26,37 @@ app.add_middleware(
 
 # In-memory store: { embassy_name: { "df": DataFrame, "source": str, "embassy": dict } }
 _store: dict = {}
-_last_refreshed: str = "never"
+_last_refreshed: dict = {}   # { embassy_name: "YYYY-MM-DD HH:MM UTC" }
+
+
+def _load_one(embassy: dict) -> None:
+    """Refresh a single embassy and update the store."""
+    name = embassy["name"]
+    try:
+        df, source = fetch_embassy(embassy)
+    except Exception:
+        df, source = pd.DataFrame(), "error"
+    _store[name] = {"df": df, "source": source, "embassy": embassy}
+    _last_refreshed[name] = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+    logger.info(f"[{name}] refreshed — {len(df)} records at {_last_refreshed[name]}")
+
+
+def _load_newdelhi() -> None:
+    """Refresh New Delhi only (called every 5 min)."""
+    embassy = next(e for e in EMBASSIES if e["name"] == "New Delhi")
+    _load_one(embassy)
 
 
 def _load_all() -> None:
-    global _last_refreshed
-    logger.info("Refreshing all embassy data...")
+    """Refresh all 5 embassies in parallel (called every 15 min)."""
+    logger.info("Refreshing all embassies...")
     with ThreadPoolExecutor(max_workers=5) as ex:
-        futures = {ex.submit(fetch_embassy, e): e for e in EMBASSIES}
-        for future, embassy in futures.items():
+        futures = {ex.submit(_load_one, e): e for e in EMBASSIES}
+        for future in futures:
             try:
-                df, source = future.result()
-            except Exception:
-                df, source = pd.DataFrame(), "error"
-            _store[embassy["name"]] = {"df": df, "source": source, "embassy": embassy}
-    _last_refreshed = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
-    logger.info(f"Refresh complete at {_last_refreshed}. Records: { {k: len(v['df']) for k,v in _store.items()} }")
+                future.result()
+            except Exception as exc:
+                logger.error(f"Error refreshing embassy: {exc}")
 
 
 @app.on_event("startup")
@@ -49,13 +64,14 @@ async def startup() -> None:
     # Initial load
     _load_all()
 
-    # ── Refresh every 15 minutes, 24/7, all embassies ────────────────────────
-    # Max staleness = 15 min regardless of when results are published
-    # (New Delhi daily, Beijing daily, Abuja/AbuDhabi/Ankara weekly)
+    # ── Scheduler ─────────────────────────────────────────────────────────────
+    # New Delhi  → every 5 min  (daily publish, results can come any time)
+    # All others → every 15 min (Beijing daily, rest weekly)
     scheduler = BackgroundScheduler(timezone="UTC")
-    scheduler.add_job(_load_all, "interval", minutes=15)
+    scheduler.add_job(_load_newdelhi, "interval", minutes=5,  id="newdelhi_5min")
+    scheduler.add_job(_load_all,      "interval", minutes=15, id="all_15min")
     scheduler.start()
-    logger.info("Scheduler started. Refreshing all embassies every 15 minutes.")
+    logger.info("Scheduler started: New Delhi every 5 min | all embassies every 15 min.")
 
 
 # ── Health ────────────────────────────────────────────────────────────────────
@@ -64,8 +80,15 @@ async def startup() -> None:
 def health():
     return {
         "status": "ok",
-        "last_refreshed": _last_refreshed,
-        "record_counts": {k: len(v["df"]) for k, v in _store.items()}
+        "last_refreshed": _last_refreshed,          # per-embassy timestamps
+        "record_counts": {k: len(v["df"]) for k, v in _store.items()},
+        "schedule": {
+            "New Delhi": "every 5 min",
+            "Beijing": "every 15 min",
+            "Abuja": "every 15 min",
+            "Abu Dhabi": "every 15 min",
+            "Ankara": "every 15 min",
+        }
     }
 
 
