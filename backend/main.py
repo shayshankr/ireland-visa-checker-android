@@ -96,16 +96,22 @@ def health():
 
 @app.get("/api/embassies")
 def get_embassies():
-    return [
-        {
+    result = []
+    for name, data in _store.items():
+        df = data["df"]
+        approved = int((df["decision"].str.upper() == "APPROVED").sum()) if not df.empty else 0
+        refused  = int((df["decision"].str.upper() == "REFUSED").sum())  if not df.empty else 0
+        result.append({
             "name": name,
             "cadence": data["embassy"]["cadence"],
-            "record_count": len(data["df"]),
+            "record_count": len(df),
+            "approved": approved,
+            "refused": refused,
             "source": data["source"],
-            "available": not data["df"].empty,
-        }
-        for name, data in _store.items()
-    ]
+            "available": not df.empty,
+            "last_refreshed": _last_refreshed.get(name, ""),
+        })
+    return result
 
 
 # ── Stats ─────────────────────────────────────────────────────────────────────
