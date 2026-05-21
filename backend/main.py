@@ -8,7 +8,6 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from apscheduler.schedulers.background import BackgroundScheduler
-from apscheduler.triggers.cron import CronTrigger
 
 from embassies import EMBASSIES
 from fetchers import fetch_embassy, _find_file_links
@@ -50,28 +49,13 @@ async def startup() -> None:
     # Initial load
     _load_all()
 
-    # ── Scheduled refreshes (all times in UTC, IST = UTC+5:30) ────────────────
-    # New Delhi & Beijing publish daily 10:00–11:00 AM IST = 04:30–05:30 UTC
-    # Refresh every 15 min from 04:15 to 05:45 UTC to catch it immediately
-    # Also refresh at midnight UTC to reset weekly embassy data
+    # ── Refresh every 15 minutes, 24/7, all embassies ────────────────────────
+    # Max staleness = 15 min regardless of when results are published
+    # (New Delhi daily, Beijing daily, Abuja/AbuDhabi/Ankara weekly)
     scheduler = BackgroundScheduler(timezone="UTC")
-
-    # Catch daily New Delhi / Beijing update (10–11 AM IST window)
-    for minute in ["15", "30", "45"]:
-        scheduler.add_job(_load_all, CronTrigger(hour="4", minute=minute))   # 09:45–10:15 IST
-        scheduler.add_job(_load_all, CronTrigger(hour="5", minute=minute))   # 11:15 IST
-
-    scheduler.add_job(_load_all, CronTrigger(hour="5", minute="0"))          # 10:30 AM IST exactly
-    scheduler.add_job(_load_all, CronTrigger(hour="4", minute="0"))          # 09:30 AM IST warm-up
-
-    # Weekly embassies (Abuja, Abu Dhabi, Ankara) — refresh Mon/Thu mornings IST
-    scheduler.add_job(_load_all, CronTrigger(day_of_week="mon,thu", hour="3", minute="0"))  # 08:30 IST
-
-    # Nightly full refresh (midnight IST = 18:30 UTC previous day)
-    scheduler.add_job(_load_all, CronTrigger(hour="18", minute="30"))
-
+    scheduler.add_job(_load_all, "interval", minutes=15)
     scheduler.start()
-    logger.info("Scheduler started. Auto-refresh active.")
+    logger.info("Scheduler started. Refreshing all embassies every 15 minutes.")
 
 
 # ── Health ────────────────────────────────────────────────────────────────────
