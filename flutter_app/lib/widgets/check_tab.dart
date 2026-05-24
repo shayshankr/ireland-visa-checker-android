@@ -389,11 +389,11 @@ class _BulletItem extends StatelessWidget {
 
 class _EmbassyLinksExpansionTile extends StatelessWidget {
   static const _embassies = [
-    {'name': 'New Delhi (India)',   'url': 'https://www.ireland.ie/en/india/newdelhi/services/visas/visa-decisions/'},
+    {'name': 'New Delhi (India)',   'url': 'https://www.ireland.ie/en/india/newdelhi/services/visas/processing-times-and-decisions/'},
     {'name': 'Beijing (China)',     'url': 'https://www.ireland.ie/en/china/beijing/services/visas/visa-decisions/'},
-    {'name': 'Abu Dhabi (UAE)',     'url': 'https://www.ireland.ie/en/uae/abudhabi/services/visas/visa-decisions/'},
-    {'name': 'Abuja (Nigeria)',     'url': 'https://www.ireland.ie/en/nigeria/abuja/services/visas/visa-decisions/'},
-    {'name': 'Ankara (Turkiye)',    'url': 'https://www.ireland.ie/en/turkey/ankara/services/visas/visa-decisions/'},
+    {'name': 'Abu Dhabi (UAE)',     'url': 'https://www.ireland.ie/en/uae/abudhabi/services/visas/weekly-decision-reports/'},
+    {'name': 'Abuja (Nigeria)',     'url': 'https://www.ireland.ie/en/nigeria/abuja/services/visas/weekly-decision-reports/'},
+    {'name': 'Ankara (Turkiye)',    'url': 'https://www.ireland.ie/en/turkiye/ankara/services/visas/weekly-decision-report/'},
   ];
 
   const _EmbassyLinksExpansionTile();
