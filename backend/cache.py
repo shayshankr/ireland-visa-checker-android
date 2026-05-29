@@ -69,3 +69,27 @@ def etag_unchanged(meta: dict, etag: str, last_modified: str) -> bool:
     if last_modified and meta.get("last_modified") == last_modified:
         return True
     return False
+
+
+def clear_cache(name: str = None) -> int:
+    """
+    Delete cached files from disk.
+    If name is given, clears only that embassy.
+    If name is None, clears ALL embassy caches.
+    Returns number of files deleted.
+    """
+    import glob
+    deleted = 0
+    if name:
+        key = _cache_key(name)
+        for ext in (".json", ".pkl"):
+            path = os.path.join(CACHE_DIR, f"{key}{ext}")
+            if os.path.exists(path):
+                os.remove(path)
+                deleted += 1
+    else:
+        for path in glob.glob(os.path.join(CACHE_DIR, "*.json")) + \
+                    glob.glob(os.path.join(CACHE_DIR, "*.pkl")):
+            os.remove(path)
+            deleted += 1
+    return deleted

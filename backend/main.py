@@ -11,6 +11,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 
 from embassies import EMBASSIES
 from fetchers import fetch_embassy, _find_file_links
+from cache import clear_cache
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -253,5 +254,30 @@ def debug_links():
 
 @app.post("/api/refresh")
 def refresh():
+    """Soft refresh — re-fetches only if cache is stale or file URL changed."""
     _load_all()
     return {"status": "refreshed", "last_refreshed": _last_refreshed}
+
+
+@app.post("/api/hard-refresh")
+def hard_refresh(embassy: str = None):
+    """
+    Hard refresh — wipes disk cache first, then re-downloads from source.
+    Optional query param: ?embassy=Ankara  to refresh a single embassy.
+    Example: POST /api/hard-refresh?embassy=Ankara
+    """
+    deleted = clear_cache(embassy)
+    if embassy:
+        target = next((e for e in EMBASSIES if e["name"].lower() == embassy.lower()), None)
+        if not target:
+            raise HTTPException(status_code=404, detail=f"Embassy '{embassy}' not found.")
+        _load_one(target)
+    else:
+        _load_all()
+    return {
+        "status": "hard_refreshed",
+        "cache_files_deleted": deleted,
+        "embassy": embassy or "all",
+        "last_refreshed": _last_refreshed,
+        "record_counts": {k: len(v["df"]) for k, v in _store.items()},
+    }
