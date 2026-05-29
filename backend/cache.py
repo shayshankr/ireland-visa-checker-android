@@ -6,7 +6,7 @@ import time
 
 import requests
 
-CACHE_DIR = os.path.join(os.path.dirname(__file__), ".cache")
+CACHE_DIR = os.path.join(os.path.dirname(__file__), ".cache_v2")
 MAX_AGE_HOURS = 24
 
 HEADERS = {

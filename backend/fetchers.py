@@ -72,38 +72,71 @@ def _parse_ods(content: bytes, source_label: str) -> pd.DataFrame:
 
 
 def _parse_pdf(content: bytes, source_label: str) -> pd.DataFrame:
+    rows_out = []
+
+    # ── Attempt 1: pdfplumber text extraction ─────────────────────────────────
     try:
         import pdfplumber  # type: ignore
 
-        rows_out = []
         with pdfplumber.open(io.BytesIO(content)) as pdf:
             for page in pdf.pages:
-                text = page.extract_text() or ""
-                for line in text.split("\n"):
-                    parts = line.split()
-                    for i, part in enumerate(parts):
-                        if not re.match(r"^\d{8}$", part):
+                for table in page.extract_tables():
+                    for row in table:
+                        if not row or len(row) < 2:
                             continue
-                        decision = ""
-                        for j in range(i + 1, min(i + 4, len(parts))):
-                            w = parts[j].upper()
-                            if "APPROV" in w:
-                                decision = "APPROVED"
-                                break
-                            if "REFUS" in w:
-                                decision = "REFUSED"
-                                break
-                        if decision:  # skip rows with no recognisable decision
-                            rows_out.append(
-                                {
-                                    "application_number": part,
-                                    "decision": decision,
-                                    "source": source_label,
-                                }
-                            )
-        return pd.DataFrame(rows_out) if rows_out else pd.DataFrame()
+                        app_num = str(row[0]).strip() if row[0] else ""
+                        decision = str(row[1]).strip().upper() if row[1] else ""
+                        if not re.match(r"^\d{7,9}$", app_num):
+                            continue
+                        if "APPROV" in decision:
+                            decision = "APPROVED"
+                        elif "REFUS" in decision:
+                            decision = "REFUSED"
+                        else:
+                            continue
+                        rows_out.append({
+                            "application_number": app_num,
+                            "decision": decision,
+                            "source": source_label,
+                        })
     except Exception:
-        return pd.DataFrame()
+        pass
+
+    if rows_out:
+        return pd.DataFrame(rows_out)
+
+    # ── Attempt 2: easyocr fallback for scanned/image PDFs ───────────────────
+    try:
+        import fitz        # type: ignore  (PyMuPDF)
+        import easyocr     # type: ignore
+        import numpy as np
+
+        reader = easyocr.Reader(['en'], gpu=False, verbose=False)
+        doc = fitz.open(stream=content, filetype="pdf")
+        for page in doc:
+            mat = fitz.Matrix(2.0, 2.0)
+            pix = page.get_pixmap(matrix=mat, colorspace=fitz.csRGB)
+            img_array = np.frombuffer(pix.samples, dtype=np.uint8).reshape(pix.height, pix.width, 3)
+            results = reader.readtext(img_array, detail=0, paragraph=False)
+            texts = [t.strip() for t in results]
+            for i, text in enumerate(texts):
+                if re.match(r"^\d{7,9}$", text) and i + 1 < len(texts):
+                    raw_decision = texts[i + 1].strip().upper()
+                    if "APPROV" in raw_decision:
+                        decision = "APPROVED"
+                    elif "REFUS" in raw_decision:
+                        decision = "REFUSED"
+                    else:
+                        continue
+                    rows_out.append({
+                        "application_number": text,
+                        "decision": decision,
+                        "source": source_label,
+                    })
+    except Exception:
+        pass
+
+    return pd.DataFrame(rows_out) if rows_out else pd.DataFrame()
 
 
 def fetch_embassy(embassy: dict) -> tuple[pd.DataFrame, str]:
@@ -135,8 +168,10 @@ def fetch_embassy(embassy: dict) -> tuple[pd.DataFrame, str]:
 
     etag = last_modified = None
     frames = []
-    # Only fetch the most recent file (first link on the page)
-    for link in links[:1]:
+    parsed_url = first_url  # fallback; updated to the URL we actually parsed
+    # For ODS embassies only fetch first link; for PDF try all until one parses
+    links_to_try = links[:1] if embassy["file_type"] == "ods" else links
+    for link in links_to_try:
         try:
             r = _get_with_retry(link["url"], stream=True)
             content = r.content
@@ -149,13 +184,15 @@ def fetch_embassy(embassy: dict) -> tuple[pd.DataFrame, str]:
             )
             if not frame.empty:
                 frames.append(frame)
+                parsed_url = link["url"]  # record the URL we actually parsed
+                break  # stop at first successful parse
         except Exception:
             continue
 
     if frames:
         combined = pd.concat(frames, ignore_index=True)
         combined = combined.drop_duplicates(subset=["application_number"], keep="last")
-        save_to_disk(name, combined, first_url, etag, last_modified)
+        save_to_disk(name, combined, parsed_url, etag, last_modified)
         return combined, "fresh"
 
     if df is not None:
