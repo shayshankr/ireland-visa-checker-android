@@ -393,7 +393,6 @@ class _EmbassyLinksExpansionTile extends StatelessWidget {
     {'name': 'Beijing (China)',     'url': 'https://www.ireland.ie/en/china/beijing/services/visas/visa-decisions/'},
     {'name': 'Abu Dhabi (UAE)',     'url': 'https://www.ireland.ie/en/uae/abudhabi/services/visas/weekly-decision-reports/'},
     {'name': 'Abuja (Nigeria)',     'url': 'https://www.ireland.ie/en/nigeria/abuja/services/visas/weekly-decision-reports/'},
-    {'name': 'Ankara (Turkiye)',    'url': 'https://www.ireland.ie/en/turkiye/ankara/services/visas/weekly-decision-report/'},
   ];
 
   const _EmbassyLinksExpansionTile();
