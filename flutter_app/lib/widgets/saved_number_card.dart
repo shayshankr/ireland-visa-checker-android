@@ -3,6 +3,9 @@ import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../models/saved_number.dart';
+import '../theme/status_colors.dart';
+import 'decision_banner.dart';
+import 'nearest_numbers_panel.dart';
 
 class SavedNumberCard extends StatelessWidget {
   final SavedNumber saved;
@@ -39,7 +42,9 @@ class SavedNumberCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isFound = saved.isFound;
     final borderColor = isFound
-        ? (saved.isApproved ? Colors.green.shade400 : Colors.red.shade400)
+        ? (saved.isApproved
+            ? StatusColors.approved(context).border
+            : StatusColors.refused(context).border)
         : null;
 
     return Card(
@@ -56,6 +61,14 @@ class SavedNumberCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (isFound && saved.lastDecision != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: DecisionBanner(
+                  decision: saved.lastDecision!,
+                  embassy: saved.lastEmbassy,
+                ),
+              ),
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -125,12 +138,12 @@ class SavedNumberCard extends StatelessWidget {
               children: [
                 if (isFound && saved.foundAt != null) ...[
                   Icon(Icons.event_available,
-                      size: 13, color: Colors.green.shade600),
+                      size: 13, color: StatusColors.approved(context).foreground),
                   const SizedBox(width: 4),
                   Text(
                     'Found ${_formatAbsolute(saved.foundAt!)}',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Colors.green.shade700,
+                        color: StatusColors.approved(context).foreground,
                         fontWeight: FontWeight.w600),
                   ),
                 ] else ...[
@@ -164,6 +177,22 @@ class SavedNumberCard extends StatelessWidget {
                 ),
               ],
             ),
+            if (!isFound && saved.lastNearest != null && saved.lastNearest!.isNotEmpty)
+              NearestNumbersPanel(
+                nearest: saved.lastNearest,
+                applicationNumber: saved.number,
+              ),
+            if (saved.submittedDate != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: Text(
+                  _getWaitingText(),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Colors.grey.shade600,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ),
             const Divider(height: 8),
             Align(
               alignment: Alignment.centerRight,
@@ -203,6 +232,18 @@ class SavedNumberCard extends StatelessWidget {
 
   String _formatAbsolute(DateTime time) =>
       DateFormat('MMM d, HH:mm').format(time);
+
+  String _getWaitingText() {
+    if (saved.submittedDate == null) return '';
+    if (saved.isFound && saved.foundAt != null) {
+      final days = saved.foundAt!.difference(saved.submittedDate!).inDays;
+      return 'Decided after $days days';
+    } else if (!saved.isFound) {
+      final days = DateTime.now().difference(saved.submittedDate!).inDays;
+      return 'Waiting $days days';
+    }
+    return '';
+  }
 }
 
 class _StatusChip extends StatelessWidget {
@@ -211,44 +252,39 @@ class _StatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Color bg;
-    Color fg;
+    StatusColors colors;
     IconData icon;
     final text = saved.statusText;
 
     if (saved.lastFound == null) {
-      bg = Colors.grey.shade100;
-      fg = Colors.grey.shade600;
+      colors = StatusColors.notCheckedYet(context);
       icon = Icons.help_outline;
     } else if (saved.isFound && saved.isApproved) {
-      bg = Colors.green.shade100;
-      fg = Colors.green.shade800;
+      colors = StatusColors.approved(context);
       icon = Icons.check_circle_outline;
     } else if (saved.isFound && saved.isRefused) {
-      bg = Colors.red.shade100;
-      fg = Colors.red.shade800;
+      colors = StatusColors.refused(context);
       icon = Icons.cancel_outlined;
     } else {
-      bg = Colors.orange.shade100;
-      fg = Colors.orange.shade800;
+      colors = StatusColors.notPublishedYet(context);
       icon = Icons.hourglass_empty;
     }
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: bg,
+        color: colors.background,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 13, color: fg),
+          Icon(icon, size: 13, color: colors.foreground),
           const SizedBox(width: 4),
           Text(
             text,
             style: TextStyle(
-                fontSize: 12, fontWeight: FontWeight.w600, color: fg),
+                fontSize: 12, fontWeight: FontWeight.w600, color: colors.foreground),
           ),
         ],
       ),

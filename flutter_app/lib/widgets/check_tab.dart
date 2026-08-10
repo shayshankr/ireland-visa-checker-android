@@ -8,8 +8,10 @@ import '../models/saved_number.dart';
 import '../models/visa_result.dart';
 import '../providers/saved_numbers_provider.dart';
 import '../providers/visa_provider.dart';
+import '../theme/status_colors.dart';
 import '../services/saved_numbers_service.dart';
 import 'decision_badge.dart';
+import 'nearest_numbers_panel.dart';
 
 class CheckTab extends StatefulWidget {
   const CheckTab({super.key});
@@ -308,14 +310,15 @@ class _FoundCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = result.isApproved
+        ? StatusColors.approved(context)
+        : StatusColors.refused(context);
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(
-          color: result.isApproved
-              ? Colors.green.shade300
-              : Colors.red.shade300,
+          color: colors.border,
           width: 1.5,
         ),
       ),
@@ -349,18 +352,14 @@ class _FoundCard extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(
                       horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: result.isApproved
-                        ? Colors.green.shade100
-                        : Colors.red.shade100,
+                    color: colors.background,
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
                     result.decision,
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      color: result.isApproved
-                          ? Colors.green.shade800
-                          : Colors.red.shade800,
+                      color: colors.foreground,
                     ),
                   ),
                 ),
@@ -422,23 +421,22 @@ class _NotFoundCard extends StatelessWidget {
         .where((d) => d != null)
         .fold<int?>(null, (m, d) => m == null || d! < m ? d : m);
 
+    final pendingColors = StatusColors.pending(context);
     return Card(
-      color: Theme.of(context).brightness == Brightness.dark
-          ? Colors.orange.shade900.withAlpha(80)
-          : Colors.orange.shade50,
+      color: pendingColors.background,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(children: [
-              Icon(Icons.hourglass_empty, color: Colors.orange.shade700),
+              Icon(Icons.hourglass_empty, color: pendingColors.foreground),
               const SizedBox(width: 8),
               Text(
                 'Not published yet',
                 style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: Colors.orange.shade800,
+                    color: pendingColors.foreground,
                     fontSize: 16),
               ),
               const Spacer(),
@@ -455,80 +453,18 @@ class _NotFoundCard extends StatelessWidget {
                   ? 'IRL${response.applicationNumber} is $minDelta numbers away '
                       'from the nearest published decision.'
                   : 'IRL${response.applicationNumber} has not been published yet.',
-              style: TextStyle(fontSize: 13, color: Colors.orange.shade800),
+              style: TextStyle(fontSize: 13, color: pendingColors.foreground),
             ),
-            if (nearest != null && nearest.isNotEmpty) ...[
-              const SizedBox(height: 14),
-              const Text(
-                'Nearest published numbers:',
-                style: TextStyle(fontWeight: FontWeight.bold),
+            if (nearest != null && nearest.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 14),
+                child: NearestNumbersPanel(
+                  nearest: nearest,
+                  applicationNumber: response.applicationNumber,
+                ),
               ),
-              const SizedBox(height: 8),
-              if (nearest['before'] != null)
-                _NearestRow(label: 'Before', entry: nearest['before']!),
-              if (nearest['after'] != null)
-                _NearestRow(label: 'After', entry: nearest['after']!),
-            ],
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _NearestRow extends StatelessWidget {
-  final String label;
-  final NearestResult entry;
-  const _NearestRow({required this.label, required this.entry});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: Row(
-        children: [
-          Text('$label: ', style: const TextStyle(color: Colors.grey)),
-          Text(entry.number,
-              style: const TextStyle(fontWeight: FontWeight.bold)),
-          const SizedBox(width: 8),
-          Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-            decoration: BoxDecoration(
-              color: entry.isApproved
-                  ? Colors.green.shade100
-                  : Colors.red.shade100,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              entry.decision,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: entry.isApproved
-                    ? Colors.green.shade800
-                    : Colors.red.shade800,
-              ),
-            ),
-          ),
-          const SizedBox(width: 6),
-          Flexible(
-            child: Text(
-              '(${entry.embassy})',
-              style:
-                  const TextStyle(fontSize: 12, color: Colors.grey),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          if (entry.difference != null) ...[
-            const SizedBox(width: 6),
-            Text(
-              'Δ${entry.difference}',
-              style: TextStyle(
-                  fontSize: 12, color: Colors.grey.shade500),
-            ),
-          ],
-        ],
       ),
     );
   }
@@ -542,19 +478,18 @@ class _ErrorCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final errorColors = StatusColors.refused(context);
     return Card(
-      color: Theme.of(context).brightness == Brightness.dark
-          ? Colors.red.shade900.withAlpha(80)
-          : Colors.red.shade50,
+      color: errorColors.background,
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Row(
           children: [
-            const Icon(Icons.error_outline, color: Colors.red),
+            Icon(Icons.error_outline, color: errorColors.foreground),
             const SizedBox(width: 10),
             Expanded(
               child: Text(message,
-                  style: const TextStyle(color: Colors.red)),
+                  style: TextStyle(color: errorColors.foreground)),
             ),
           ],
         ),

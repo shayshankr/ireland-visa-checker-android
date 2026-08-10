@@ -39,6 +39,13 @@ class NearestResult {
         difference: json['difference'] as int?,
       );
 
+  Map<String, dynamic> toJson() => {
+        'number': number,
+        'embassy': embassy,
+        'decision': decision,
+        'difference': difference,
+      };
+
   bool get isApproved => decision.toUpperCase() == 'APPROVED';
 }
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/status_colors.dart';
 
 class DecisionBadge extends StatelessWidget {
   final String decision;
@@ -11,13 +12,13 @@ class DecisionBadge extends StatelessWidget {
     final IconData icon;
 
     if (upper == 'APPROVED') {
-      color = Colors.green;
+      color = StatusColors.approved(context).foreground;
       icon = Icons.check_circle;
     } else if (upper == 'REFUSED') {
-      color = Colors.red;
+      color = StatusColors.refused(context).foreground;
       icon = Icons.cancel;
     } else {
-      color = Colors.grey;
+      color = StatusColors.neutral(context).foreground;
       icon = Icons.help_outline;
     }
 

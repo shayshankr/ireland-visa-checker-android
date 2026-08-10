@@ -1,3 +1,5 @@
+import 'visa_result.dart';
+
 class SavedNumber {
   final String number;
   final String? label;
@@ -8,6 +10,10 @@ class SavedNumber {
   final DateTime? lastChecked;
   /// When a decision first appeared for this number (not-found → found transition).
   final DateTime? foundAt;
+  /// User-entered submission date (optional), for calculating wait time.
+  final DateTime? submittedDate;
+  /// Nearest published application numbers (before/after) from the last check if not found.
+  final Map<String, NearestResult>? lastNearest;
 
   const SavedNumber({
     required this.number,
@@ -18,6 +24,8 @@ class SavedNumber {
     this.lastEmbassy,
     this.lastChecked,
     this.foundAt,
+    this.submittedDate,
+    this.lastNearest,
   });
 
   SavedNumber copyWith({
@@ -28,6 +36,8 @@ class SavedNumber {
     String? lastEmbassy,
     DateTime? lastChecked,
     DateTime? foundAt,
+    DateTime? submittedDate,
+    Map<String, NearestResult>? lastNearest,
   }) =>
       SavedNumber(
         number: number,
@@ -38,6 +48,8 @@ class SavedNumber {
         lastEmbassy: lastEmbassy ?? this.lastEmbassy,
         lastChecked: lastChecked ?? this.lastChecked,
         foundAt: foundAt ?? this.foundAt,
+        submittedDate: submittedDate ?? this.submittedDate,
+        lastNearest: lastNearest ?? this.lastNearest,
       );
 
   Map<String, dynamic> toJson() => {
@@ -49,22 +61,38 @@ class SavedNumber {
         'lastEmbassy': lastEmbassy,
         'lastChecked': lastChecked?.toIso8601String(),
         'foundAt': foundAt?.toIso8601String(),
+        'submittedDate': submittedDate?.toIso8601String(),
+        'lastNearest': lastNearest?.map((k, v) => MapEntry(k, v.toJson())),
       };
 
-  factory SavedNumber.fromJson(Map<String, dynamic> json) => SavedNumber(
-        number: json['number'] as String,
-        label: json['label'] as String?,
-        watchEnabled: json['watchEnabled'] as bool? ?? false,
-        lastFound: json['lastFound'] as bool?,
-        lastDecision: json['lastDecision'] as String?,
-        lastEmbassy: json['lastEmbassy'] as String?,
-        lastChecked: json['lastChecked'] != null
-            ? DateTime.tryParse(json['lastChecked'] as String)
-            : null,
-        foundAt: json['foundAt'] != null
-            ? DateTime.tryParse(json['foundAt'] as String)
-            : null,
-      );
+  factory SavedNumber.fromJson(Map<String, dynamic> json) {
+    final lastNearestJson = json['lastNearest'] as Map<String, dynamic>?;
+    Map<String, NearestResult>? lastNearest;
+    if (lastNearestJson != null) {
+      lastNearest = {};
+      lastNearestJson.forEach((key, value) {
+        lastNearest![key] = NearestResult.fromJson(value as Map<String, dynamic>);
+      });
+    }
+    return SavedNumber(
+      number: json['number'] as String,
+      label: json['label'] as String?,
+      watchEnabled: json['watchEnabled'] as bool? ?? false,
+      lastFound: json['lastFound'] as bool?,
+      lastDecision: json['lastDecision'] as String?,
+      lastEmbassy: json['lastEmbassy'] as String?,
+      lastChecked: json['lastChecked'] != null
+          ? DateTime.tryParse(json['lastChecked'] as String)
+          : null,
+      foundAt: json['foundAt'] != null
+          ? DateTime.tryParse(json['foundAt'] as String)
+          : null,
+      submittedDate: json['submittedDate'] != null
+          ? DateTime.tryParse(json['submittedDate'] as String)
+          : null,
+      lastNearest: lastNearest,
+    );
+  }
 
   String get displayNumber => 'IRL$number';
 

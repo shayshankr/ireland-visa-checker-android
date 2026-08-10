@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/visa_provider.dart';
@@ -47,6 +48,9 @@ class EmbassiesTab extends StatelessWidget {
           child: ListView(
             padding: const EdgeInsets.all(16),
             children: [
+              if (provider.dashboardFromCache &&
+                  provider.cacheTimestamp != null)
+                _CacheIndicator(timestamp: provider.cacheTimestamp!),
               if (provider.stats != null) ...[
                 StatsRow(stats: provider.stats!),
                 const SizedBox(height: 16),
@@ -59,14 +63,58 @@ class EmbassiesTab extends StatelessWidget {
               ...provider.embassies.map((e) => EmbassyCard(embassy: e)),
               const SizedBox(height: 8),
               Text(
-                'Pull down to refresh  •  Data sourced from ireland.ie',
+                'Pull down to refresh  •  Tap a card to view official page',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Data sourced from ireland.ie',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 12, color: Colors.grey.shade400),
               ),
             ],
           ),
         );
       },
+    );
+  }
+}
+
+class _CacheIndicator extends StatelessWidget {
+  final DateTime timestamp;
+  const _CacheIndicator({required this.timestamp});
+
+  String _age() {
+    final diff = DateTime.now().difference(timestamp);
+    if (diff.inSeconds < 60) return 'just now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    return DateFormat('MMM d, HH:mm').format(timestamp);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          SizedBox(
+            width: 12,
+            height: 12,
+            child: CircularProgressIndicator(
+              strokeWidth: 1.5,
+              color: Colors.grey.shade400,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            'Cached ${_age()}  •  Refreshing…',
+            style: TextStyle(fontSize: 12, color: Colors.grey.shade400),
+          ),
+        ],
+      ),
     );
   }
 }

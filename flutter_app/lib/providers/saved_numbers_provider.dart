@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../models/saved_number.dart';
 import '../services/api_service.dart';
+import '../services/home_widget_service.dart';
 import '../services/saved_numbers_service.dart';
 
 class SavedNumbersProvider extends ChangeNotifier {
@@ -62,17 +63,7 @@ class SavedNumbersProvider extends ChangeNotifier {
   Future<void> updateLabel(String number, String? label) async {
     final idx = _numbers.indexWhere((n) => n.number == number);
     if (idx == -1) return;
-    final e = _numbers[idx];
-    final updated = SavedNumber(
-      number: e.number,
-      label: label,
-      watchEnabled: e.watchEnabled,
-      lastFound: e.lastFound,
-      lastDecision: e.lastDecision,
-      lastEmbassy: e.lastEmbassy,
-      lastChecked: e.lastChecked,
-      foundAt: e.foundAt,
-    );
+    final updated = _numbers[idx].copyWith(label: label);
     await SavedNumbersService.update(updated);
     _numbers = [..._numbers]..[idx] = updated;
     notifyListeners();
@@ -82,6 +73,15 @@ class SavedNumbersProvider extends ChangeNotifier {
     final idx = _numbers.indexWhere((n) => n.number == number);
     if (idx == -1) return;
     final updated = _numbers[idx].copyWith(watchEnabled: enabled);
+    await SavedNumbersService.update(updated);
+    _numbers = [..._numbers]..[idx] = updated;
+    notifyListeners();
+  }
+
+  Future<void> updateSubmittedDate(String number, DateTime? date) async {
+    final idx = _numbers.indexWhere((n) => n.number == number);
+    if (idx == -1) return;
+    final updated = _numbers[idx].copyWith(submittedDate: date);
     await SavedNumbersService.update(updated);
     _numbers = [..._numbers]..[idx] = updated;
     notifyListeners();
@@ -115,9 +115,14 @@ class SavedNumbersProvider extends ChangeNotifier {
         lastChecked: DateTime.now(),
         // Record the moment a decision first appeared.
         foundAt: newlyFound ? DateTime.now() : existing.foundAt,
+        submittedDate: existing.submittedDate,
+        // Store nearest-numbers data if not found, clear if found.
+        lastNearest: response.found ? null : response.nearest,
       );
       await SavedNumbersService.update(updated);
       _numbers = [..._numbers]..[idx] = updated;
+      // Update home screen widget after a successful check
+      await HomeWidgetService.updateWidgetData(_numbers);
     } catch (_) {
       // Silently ignore; card stays as-is.
     } finally {
@@ -128,5 +133,7 @@ class SavedNumbersProvider extends ChangeNotifier {
 
   Future<void> checkAll() async {
     await Future.wait(_numbers.map((n) => checkNow(n.number)));
+    // Final widget update after all checks
+    await HomeWidgetService.updateWidgetData(_numbers);
   }
 }

@@ -20,6 +20,14 @@ class EmbassyInfo {
         source: json['source'] as String,
         available: json['available'] as bool,
       );
+
+  Map<String, dynamic> toJson() => {
+        'name': name,
+        'cadence': cadence,
+        'record_count': recordCount,
+        'source': source,
+        'available': available,
+      };
 }
 
 class VisaStats {
@@ -39,6 +47,11 @@ class VisaStats {
         refused: json['refused'] as int,
       );
 
-  double get approvalRate =>
-      total == 0 ? 0 : (approved / total * 100);
+  Map<String, dynamic> toJson() => {
+        'total': total,
+        'approved': approved,
+        'refused': refused,
+      };
+
+  double get approvalRate => total == 0 ? 0 : (approved / total * 100);
 }
