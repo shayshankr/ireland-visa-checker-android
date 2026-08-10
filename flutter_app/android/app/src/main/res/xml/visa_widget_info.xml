@@ -3,7 +3,6 @@
     android:minWidth="250dp"
     android:minHeight="110dp"
     android:updatePeriodMillis="900000"
-    android:previewImage="@drawable/ic_launcher_foreground"
     android:initialLayout="@layout/visa_widget"
     android:resizeMode="horizontal|vertical"
     android:widgetCategory="home_screen"
