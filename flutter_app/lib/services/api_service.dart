@@ -21,7 +21,10 @@ class ApiService {
         .post(
           Uri.parse('$baseUrl/api/check'),
           headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({'application_number': applicationNumber}),
+          body: jsonEncode({
+            'application_number': applicationNumber,
+            'embassy': 'New Delhi', // Default to New Delhi (primary, most frequently updated)
+          }),
         )
         .timeout(const Duration(seconds: 30));
 
